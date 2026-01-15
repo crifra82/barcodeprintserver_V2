@@ -41,16 +41,7 @@ Public Class WatchFold
         Dim labelfield1 As String
         Dim labelfield2 As String
         Dim labelfield3 As String
-        Dim labelfield4 As String
-        Dim labelfield5 As String
-        Dim labelfield6 As String
-        Dim labelfield7 As String
-        Dim labelfield8 As String
-        Dim labelfield9 As String
         Dim code128 As String
-        Dim ean13 As String
-        Dim ean8 As String
-        Dim logo As String
         '
     End Structure
     Dim labelRows As sLabelrows
@@ -275,26 +266,25 @@ Public Class WatchFold
                     With _tplrow
                         Try
                             Dim _style As String = .style
-                            Dim lStyle As FontStyle
-                            Select Case _style.ToLower
+                            Dim lStyle As FontStyle = FontStyle.Regular   ' default
+
+                            Select Case _style.ToLower()
                                 Case "bold"
                                     lStyle = FontStyle.Bold
                                 Case "normal"
                                     lStyle = FontStyle.Regular
                                 Case "strike"
                                     lStyle = FontStyle.Strikeout
-
+                                Case "italic"
+                                    lStyle = FontStyle.Italic
+                                Case "underline"
+                                    lStyle = FontStyle.Underline
+                                Case Else
+                                    ' Se arriva un valore sconosciuto, resta Regular
                             End Select
                             e.Graphics.PageUnit = GraphicsUnit.Millimeter
                             Dim _rowfont As New System.Drawing.Font(.font, .size, lStyle, GraphicsUnit.Millimeter)
                             Select Case _row.ToString.ToLower
-                                Case "logo"
-                                    If CTran(labelRows.logo, "") <> "" Then
-                                        Dim str_logo As String = labelRows.logo
-                                        Dim bitmap As New Bitmap(str_logo)
-                                        e.Graphics.DrawImage(CType(bitmap, Image), 5, 0)
-                                        'e.Graphics.DrawString(labelRows.logo, _rowfont, Brushes.Black, .x, _startPosY + .y)
-                                    End If
                                 Case "labelfield0"
                                     'descrizione articolo prima
                                     e.Graphics.DrawString(labelRows.labelfield0, _rowfont, Brushes.Black, .x, _startPosY + .y)
@@ -307,31 +297,27 @@ Public Class WatchFold
                                 Case "labelfield3"
                                     'prezzo
                                     e.Graphics.DrawString(labelRows.labelfield3, _rowfont, Brushes.Black, .x, _startPosY + .y)
-                                Case "ean13"
-                                    'non uso la funzione barcode_x perchè uso la funzione barcode di adhoc
-                                    'come font devo usare EanP36Tt sia per ean8 che ean13
-                                    If CTran(labelRows.ean13, "") <> "" Then
-                                        'Dim stringa As String = barcode_x("ean13", labelRows.ean13
-                                        Dim stringa As String = labelRows.ean13
-                                        'e.Graphics.DrawString(stringa, New Font("Code EAN13", .size), Brushes.Black, .x, _startPosY + .y
-                                        e.Graphics.DrawString(stringa, New Font("EanP36Tt", .size), Brushes.Black, .x, _startPosY + .y)
-                                    End If
-                                Case "ean8"
-                                    'non uso la funzione barcode_x perchè uso la funzione barcode di adhoc
-                                    'come font devo usare EanP36Tt sia per ean8 che ean13
-                                    'genBarcode(labelRows.code128, "code128")
-                                    If CTran(labelRows.ean8, "") <> "" Then
-                                        'Dim stringa As String = barcode_x("ean8", labelRows.ean8)
-                                        Dim stringa As String = labelRows.ean8
-                                        e.Graphics.DrawString(stringa, New Font("EanP36Tt", .size), Brushes.Black, .x, _startPosY + .y)
-                                    End If
                                 Case "code128"
-                                    'genBarcode(labelRows.code128, "code128")
-                                    If CTran(labelRows.code128, "") <> "" Then
-                                        'Dim stringa As String = barcode_x("code128", labelRows.code128)
-                                        Dim stringa As String = labelRows.code128
-                                        e.Graphics.DrawString(stringa, New Font("Code 128", .size), Brushes.Black, .x, _startPosY + .y)
+                                    ' Recupera la stringa del barcode in modo sicuro
+                                    Dim codeStr As String = CStr(CTran(labelRows.code128, ""))
+
+                                    ' Controlla che la stringa non sia vuota
+                                    If Not String.IsNullOrEmpty(codeStr) Then
+                                        ' Genera l'immagine del barcode
+                                        Dim barcodeImg As Image = genBarcodeImage(codeStr)
+
+                                        If barcodeImg IsNot Nothing Then
+                                            ' Definisci coordinate numeriche sicure
+                                            Dim posX As Single = CSng(.x)
+                                            Dim posY As Single = CSng(_startPosY + .y)
+
+                                            ' Disegna l'immagine
+                                            'e.Graphics.DrawImage(barcodeImg, posX, posY, barcodeImg.Width, barcodeImg.Height
+                                            e.Graphics.DrawImage(barcodeImg, posX, posY, 40, 13)
+                                        End If
                                     End If
+
+
 
                             End Select
                         Catch ex As Exception
@@ -364,6 +350,14 @@ Public Class WatchFold
         End Try
 
     End Sub
+    Private Function genBarcodeImage(ByVal pString As String) As Image
+        Dim B As New Barcodes.Barcode128(Barcodes.Barcode128.BCEncoding.Code128B, False)
+        With B
+            .BarWidth = 1
+            .ShowString = True
+            Return .DrawBarCode(pString)
+        End With
+    End Function
     Private Sub genBarcode(ByVal pString As String, ByVal CodeType As String)
         'non usata
         Select Case CodeType.ToLower
@@ -460,26 +454,8 @@ Public Class WatchFold
                                 .labelfield2 = value
                             Case "labelfield3"
                                 .labelfield3 = value
-                            Case "labelfield4"
-                                .labelfield4 = value
-                            Case "labelfield5"
-                                .labelfield5 = value
-                            Case "labelfield6"
-                                .labelfield6 = value
-                            Case "labelfield7"
-                                .labelfield7 = value
-                            Case "labelfield8"
-                                .labelfield8 = value
-                            Case "labelfield9"
-                                .labelfield9 = value
-                            Case "ean13"
-                                .ean13 = value
-                            Case "ean8"
-                                .ean8 = value
                             Case "code128"
                                 .code128 = value
-                            Case "logo"
-                                .logo = value
                         End Select
                     End With
                 Next
@@ -518,16 +494,7 @@ Public Class WatchFold
             _labelTagArray.Add("labelfield1")
             _labelTagArray.Add("labelfield2")
             _labelTagArray.Add("labelfield3")
-            _labelTagArray.Add("labelfield4")
-            _labelTagArray.Add("labelfield5")
-            _labelTagArray.Add("labelfield6")
-            _labelTagArray.Add("labelfield7")
-            _labelTagArray.Add("labelfield8")
-            _labelTagArray.Add("labelfield9")
-            _labelTagArray.Add("ean13")
-            _labelTagArray.Add("ean8")
             _labelTagArray.Add("code128")
-            _labelTagArray.Add("logo")
             '
             'oggetto per il file xml
             Dim Xmlfile As New XmlDocument
