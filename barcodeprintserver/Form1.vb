@@ -313,7 +313,7 @@ Public Class WatchFold
 
                                             ' Disegna l'immagine
                                             'e.Graphics.DrawImage(barcodeImg, posX, posY, barcodeImg.Width, barcodeImg.Height
-                                            e.Graphics.DrawImage(barcodeImg, posX, posY, 40, 13)
+                                            e.Graphics.DrawImage(barcodeImg, posX, posY, 50, 20)
                                         End If
                                     End If
 
