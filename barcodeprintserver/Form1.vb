@@ -23,6 +23,9 @@ Public Class WatchFold
     Dim _barcode As String = ""
     Dim _t_copie As Integer = 1
     Dim _copie As Integer = Globale.g_number
+    Public _larg As Integer = Globale.g_larg
+    Public _lung As Integer = Globale.g_lung
+
     Dim cf As New CConfig
     Dim hLabel As New Hashtable ' hasttable containing ten sLabel structure 
     Public Structure sLabel
@@ -258,6 +261,11 @@ Public Class WatchFold
     Private Sub PrintDocument1_PrintPage(ByVal sender As System.Object, ByVal e As System.Drawing.Printing.PrintPageEventArgs) Handles PrintDocument1.PrintPage
 
         Try
+            Dim larghezza As Integer
+            larghezza = Convert.ToInt32(g_larg)
+            Dim lunghezza As Integer
+            lunghezza = Convert.ToInt32(g_lung)
+
             For _ii As Integer = 1 To _rowPerpage
 
                 For Each _row As String In hLabel.Keys
@@ -313,7 +321,7 @@ Public Class WatchFold
 
                                             ' Disegna l'immagine
                                             'e.Graphics.DrawImage(barcodeImg, posX, posY, barcodeImg.Width, barcodeImg.Height
-                                            e.Graphics.DrawImage(barcodeImg, posX, posY, 50, 20)
+                                            e.Graphics.DrawImage(barcodeImg, posX, posY, larghezza, lunghezza)
                                         End If
                                     End If
 

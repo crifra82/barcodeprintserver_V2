@@ -18,12 +18,15 @@ Public Class CConfig
             '
             elm = secPropSet.Settings.Get("Number")
             Globale.g_number = elm.Value.ValueXml.InnerText
-
-            elm = secPropSet.Settings.Get("Time")
-            Globale.g_time = elm.Value.ValueXml.InnerText
             '
             elm = secPropSet.Settings.Get("FolderToWatch")
             Globale.g_FolderToWatch = elm.Value.ValueXml.InnerText
+
+            elm = secPropSet.Settings.Get("larg")
+            Globale.g_larg = elm.Value.ValueXml.InnerText
+
+            elm = secPropSet.Settings.Get("alt")
+            Globale.g_lung = elm.Value.ValueXml.InnerText
             '
             elm = secPropSet.Settings.Get("StartMinimized")
             If elm.Value.ValueXml.InnerText.Trim.ToUpper = "YES" Then
@@ -31,6 +34,8 @@ Public Class CConfig
             Else
                 Globale.g_StartMinimized = False
             End If
+
+
             '
         Catch ex As System.Exception
             MsgBox(ex.Message, MsgBoxStyle.Critical, "Configuration reading")

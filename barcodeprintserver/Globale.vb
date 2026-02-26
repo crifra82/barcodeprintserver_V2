@@ -149,7 +149,9 @@ Module Globale
     Public g_time As Integer = 2000
     Public g_StartMinimized As Boolean
     Public g_FolderToWatch As String
- 
+    Public g_larg As String
+    Public g_lung As String
+
     Public Enum GStato As Integer
         Inserimento = 0
         Modifica = 1
