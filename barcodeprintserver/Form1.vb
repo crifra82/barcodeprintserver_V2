@@ -5,6 +5,10 @@ Imports System.Xml
 
 
 Public Class WatchFold
+    Public Function CleanString(ByVal input As String) As String
+        If input Is Nothing Then Return ""
+        Return System.Text.RegularExpressions.Regex.Replace(input, "[\x00-\x1F\x7F]", "")
+    End Function
 
     Public watchfolder As FileSystemWatcher
     Public WithEvents TrayIcon As NotifyIcon
@@ -45,6 +49,7 @@ Public Class WatchFold
         Dim labelfield2 As String
         Dim labelfield3 As String
         Dim code128 As String
+        Dim ean13 As String
         '
     End Structure
     Dim labelRows As sLabelrows
@@ -294,17 +299,20 @@ Public Class WatchFold
                             Dim _rowfont As New System.Drawing.Font(.font, .size, lStyle, GraphicsUnit.Millimeter)
                             Select Case _row.ToString.ToLower
                                 Case "labelfield0"
-                                    'descrizione articolo prima
-                                    e.Graphics.DrawString(labelRows.labelfield0, _rowfont, Brushes.Black, .x, _startPosY + .y)
+                                    'CODICE 
+                                    e.Graphics.DrawString(CleanString(labelRows.labelfield0), _rowfont, Brushes.Black, .x, _startPosY + .y)
                                 Case "labelfield1"
-                                    'descrizione articolo seconda
-                                    e.Graphics.DrawString(labelRows.labelfield1, _rowfont, Brushes.Black, .x, _startPosY + .y)
-                                Case "labelfield2"
-                                    'prezzo
-                                    e.Graphics.DrawString(labelRows.labelfield2, _rowfont, Brushes.Black, .x, _startPosY + .y)
-                                Case "labelfield3"
-                                    'prezzo
-                                    e.Graphics.DrawString(labelRows.labelfield3, _rowfont, Brushes.Black, .x, _startPosY + .y)
+                                    'descrizione articolo 
+                                    e.Graphics.DrawString(CleanString(labelRows.labelfield1), _rowfont, Brushes.Black, .x, _startPosY + .y)
+                                Case "ean13"
+                                    'non uso la funzione barcode_x perchè uso la funzione barcode di adhoc
+                                    'come font devo usare EanP36Tt sia per ean8 che ean13
+                                    If CTran(labelRows.ean13, "") <> "" Then
+                                        'Dim stringa As String = barcode_x("ean13", labelRows.ean13
+                                        Dim stringa As String = labelRows.ean13
+                                        'e.Graphics.DrawString(stringa, New Font("Code EAN13", .size), Brushes.Black, .x, _startPosY + .y
+                                        e.Graphics.DrawString(stringa, New Font("EanP36Tt", .size), Brushes.Black, .x, _startPosY + .y)
+                                    End If
                                 Case "code128"
                                     ' Recupera la stringa del barcode in modo sicuro
                                     Dim codeStr As String = CStr(CTran(labelRows.code128, ""))
@@ -451,7 +459,7 @@ Public Class WatchFold
             For Each nodo As XmlNode In XmlNodo
                 For Each element As XmlNode In nodo.ChildNodes
                     Dim name As String = element.Name
-                    Dim value As String = CTran(element.InnerText, "")
+                    Dim value As String = CleanString(CTran(element.InnerText, ""))
                     With labelRows
                         Select Case name.ToLower
                             Case "labelfield0"
@@ -462,6 +470,8 @@ Public Class WatchFold
                                 .labelfield2 = value
                             Case "labelfield3"
                                 .labelfield3 = value
+                            Case "ean13"
+                                .ean13 = value
                             Case "code128"
                                 .code128 = value
                         End Select
@@ -503,6 +513,7 @@ Public Class WatchFold
             _labelTagArray.Add("labelfield2")
             _labelTagArray.Add("labelfield3")
             _labelTagArray.Add("code128")
+            _labelTagArray.Add("ean13")
             '
             'oggetto per il file xml
             Dim Xmlfile As New XmlDocument
@@ -522,7 +533,7 @@ Public Class WatchFold
                 For Each nodo As XmlNode In XmlNodo
                     For Each element As XmlNode In nodo.ChildNodes
                         Dim name As String = element.Name
-                        Dim value As String = element.InnerText
+                        Dim value As String = CleanString(CTran(element.InnerText, ""))
                         With labelStructure
                             Select Case name.ToLower
                                 Case "x"
