@@ -407,11 +407,20 @@ Public Class WatchFold
             _numTotRig = _numTotRig
             '_numTotRig = _numTotRig * _copie
             _index = 1
-            If PrinterName = "" Then
-                PrintDocument1.PrinterSettings.PrinterName = Globale.g_printer
-            Else
+            'If PrinterName = "" Then
+            'PrintDocument1.PrinterSettings.PrinterName = Globale.g_printer
+            'Else
+            'PrintDocument1.PrinterSettings.PrinterName = PrinterName
+            'End If
+
+            'prendiamo di default la stampante nel file config e come seconda scelta quella di ahr
+            If Globale.g_printer = "" Then
                 PrintDocument1.PrinterSettings.PrinterName = PrinterName
+            Else
+                PrintDocument1.PrinterSettings.PrinterName = Globale.g_printer
             End If
+
+
             PrintDocument1.Print()
         Catch ex As Printing.InvalidPrinterException
             MsgBox(ex.Message, MsgBoxStyle.Critical, "PrintLabel")
