@@ -1,5 +1,6 @@
 ﻿Questa versione di barcode viene usata sia da macro che da sate
 quel che cambia è il template
+da sistemare e mettere in config in ahr
 
 
 Dentro al file
