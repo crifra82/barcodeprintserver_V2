@@ -6,8 +6,33 @@ Imports System.Xml
 
 Public Class WatchFold
     Public Function CleanString(ByVal input As String) As String
-        If input Is Nothing Then Return ""
-        Return System.Text.RegularExpressions.Regex.Replace(input, "[\x00-\x1F\x7F]", "")
+        If String.IsNullOrEmpty(input) Then Return ""
+
+        ' --- 1. Rimuovi o sostituisci spazi strani ---
+        ' Caratteri Unicode considerati spazi “strani” o non-breaking
+        Dim weirdSpaces As Char() = {
+        ChrW(&HA0), ChrW(&H2000), ChrW(&H2001), ChrW(&H2002),
+        ChrW(&H2003), ChrW(&H2004), ChrW(&H2005), ChrW(&H2006),
+        ChrW(&H2007), ChrW(&H2008), ChrW(&H2009), ChrW(&H200A),
+        ChrW(&H202F), ChrW(&H205F), ChrW(&H3000)
+    }
+
+        For Each ch As Char In weirdSpaces
+            input = input.Replace(ch, " "c)
+        Next
+
+        ' --- 2. Rimuovi caratteri non validi per XML ---
+        ' XML permette solo: tab, newline, carriage return, e caratteri validi Unicode
+        input = System.Text.RegularExpressions.Regex.Replace(input,
+        "[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD]", "")
+
+        ' --- 3. Escapa caratteri speciali XML ---
+        input = input.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;")
+
+        ' --- 4. Rimuove eventuali caratteri invisibili / zero-width (opzionale) ---
+        input = System.Text.RegularExpressions.Regex.Replace(input, "[\u200B-\u200D\uFEFF]", "")
+
+        Return input
     End Function
 
     Public watchfolder As FileSystemWatcher
@@ -301,11 +326,13 @@ Public Class WatchFold
                             Dim _rowfont As New System.Drawing.Font(.font, .size, lStyle, GraphicsUnit.Millimeter)
                             Select Case _row.ToString.ToLower
                                 Case "labelfield0"
-                                    'CODICE 
                                     e.Graphics.DrawString(CleanString(labelRows.labelfield0), _rowfont, Brushes.Black, .x, _startPosY + .y)
                                 Case "labelfield1"
-                                    'descrizione articolo 
                                     e.Graphics.DrawString(CleanString(labelRows.labelfield1), _rowfont, Brushes.Black, .x, _startPosY + .y)
+                                Case "labelfield2"
+                                    e.Graphics.DrawString(labelRows.labelfield2, _rowfont, Brushes.Black, .x, _startPosY + .y)
+                                Case "labelfield3"
+                                    e.Graphics.DrawString(labelRows.labelfield3, _rowfont, Brushes.Black, .x, _startPosY + .y)
                                 Case "ean13"
                                     'non uso la funzione barcode_x perchè uso la funzione barcode di adhoc
                                     'come font devo usare EanP36Tt sia per ean8 che ean13
@@ -509,7 +536,7 @@ Public Class WatchFold
 
     End Function
 
-    Private Function readXmlLabelFile(ByVal pFilename As String, i As Integer) As Boolean
+    Private Function ___old2__readXmlLabelFile(ByVal pFilename As String, i As Integer) As Boolean
         Try
             Threading.Thread.Sleep(g_time)
 
@@ -573,6 +600,72 @@ Public Class WatchFold
             txt_folderactivity.Text &= $"Errore lettura file, numero lettura: {i}" & vbCrLf
             Return False
 
+        Catch ex As Exception
+            txt_folderactivity.Text &= $"Errore non gestito, numero lettura: {i}" & vbCrLf
+            MsgBox(ex.Message, MsgBoxStyle.Critical, "readXmlLabelFile")
+            Return False
+        End Try
+    End Function
+
+    Private Function readXmlLabelFile(ByVal pFilename As String, i As Integer) As Boolean
+        Try
+            ' --- Attendi che il file sia completo ---
+            Threading.Thread.Sleep(g_time)
+
+            ' --- Leggi il file senza modificare i tag ---
+            Dim rawXml As String = File.ReadAllText(pFilename, New System.Text.UTF8Encoding(False))
+            rawXml = rawXml.TrimStart() ' rimuove spazi/BOM prima del tag radice
+
+            ' --- Carica XmlDocument --- 
+            Dim xmlDoc As New XmlDocument()
+            xmlDoc.LoadXml(rawXml)
+
+            ' --- Pulisci lista righe ---
+            labelRowsList.Clear()
+
+            ' --- Leggi template e printer name ---
+            For Each nodo As XmlNode In xmlDoc.GetElementsByTagName("dataroot")
+                For Each element As XmlNode In nodo.ChildNodes
+                    Select Case element.Name.ToLower()
+                        Case "templatename"
+                            loadTemplate(element.InnerText) ' qui va bene escape normale
+                        Case "printername"
+                            PrinterName = element.InnerText
+                    End Select
+                Next
+            Next
+
+            ' --- Leggi righe <row> ---
+            For Each nodo As XmlNode In xmlDoc.GetElementsByTagName("row")
+                Dim rowItem As New sLabelrows
+                For Each element As XmlNode In nodo.ChildNodes
+                    Dim tag As String = element.Name.ToLower()
+                    Dim value As String = CleanString(CTran(element.InnerText, "")) ' pulizia solo dei valori
+                    Select Case tag
+                        Case "labelfield0" : rowItem.labelfield0 = value
+                        Case "labelfield1" : rowItem.labelfield1 = value
+                        Case "labelfield2" : rowItem.labelfield2 = value
+                        Case "labelfield3" : rowItem.labelfield3 = value
+                        Case "ean13" : rowItem.ean13 = value
+                        Case "code128" : rowItem.code128 = value
+                    End Select
+                Next
+                labelRowsList.Add(rowItem)
+            Next
+
+            ' --- Elimina file solo dopo lettura ---
+            File.Delete(pFilename)
+
+            ' --- Stampa ---
+            For Each rowData As sLabelrows In labelRowsList
+                labelRows = rowData
+                printLabel()
+            Next
+
+            Return True
+        Catch ex As IOException
+            txt_folderactivity.Text &= $"Errore lettura file, numero lettura: {i}" & vbCrLf
+            Return False
         Catch ex As Exception
             txt_folderactivity.Text &= $"Errore non gestito, numero lettura: {i}" & vbCrLf
             MsgBox(ex.Message, MsgBoxStyle.Critical, "readXmlLabelFile")

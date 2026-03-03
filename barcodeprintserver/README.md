@@ -1,4 +1,8 @@
-﻿Dentro al file
+﻿Questa versione di barcode viene usata sia da macro che da sate
+quel che cambia è il template
+
+
+Dentro al file
 barcodesrv.exe.config
 mettere il nome stampante a cui viene data la precedenza
 <setting name="Printer" serializeAs="String">
