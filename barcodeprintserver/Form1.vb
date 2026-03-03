@@ -53,6 +53,8 @@ Public Class WatchFold
         '
     End Structure
     Dim labelRows As sLabelrows
+    'aggiunta riga per file multiplo
+    Dim labelRowsList As New List(Of sLabelrows)
 
     Private Sub btn_startwatch_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btn_startwatch.Click
         startWatching()
@@ -417,7 +419,7 @@ Public Class WatchFold
             MsgBox(ex.Message, MsgBoxStyle.Critical, "PrintLabel")
         End Try
     End Sub
-    Private Function readXmlLabelFile(ByVal pFilename As String, i As Integer) As Boolean
+    Private Function __old___readXmlLabelFile(ByVal pFilename As String, i As Integer) As Boolean
 
         Try
             labelRows = New sLabelrows
@@ -430,6 +432,9 @@ Public Class WatchFold
             Dim _descr2 As String = ""
             'oggetto per il file xml
             Dim Xmlfile As New XmlDocument
+            'aggiunta riga per file multiplo
+            ' svuoto la lista prima di iniziare
+            labelRowsList.Clear()
 
             '
             'carico il file
@@ -493,6 +498,77 @@ Public Class WatchFold
             Return Nothing
         End Try
 
+    End Function
+
+    Private Function readXmlLabelFile(ByVal pFilename As String, i As Integer) As Boolean
+        Try
+            Threading.Thread.Sleep(g_time)
+
+            Dim xmlDoc As New XmlDocument()
+            Dim xmlReader As New XmlTextReader(pFilename) With {
+            .WhitespaceHandling = WhitespaceHandling.None
+        }
+
+            labelRowsList.Clear()
+
+            xmlDoc.Load(xmlReader)
+
+            ' --- LETTURA TEMPLATE E PRINTER NAME ---
+            For Each nodo As XmlNode In xmlDoc.GetElementsByTagName("dataroot")
+                For Each element As XmlNode In nodo.ChildNodes
+                    Select Case element.Name.ToLower()
+                        Case "templatename"
+                            loadTemplate(element.InnerText)
+                        Case "printername"
+                            PrinterName = element.InnerText
+                    End Select
+                Next
+            Next
+
+            ' --- LETTURA DI TUTTE LE RIGHE <row> ---
+            For Each nodo As XmlNode In xmlDoc.GetElementsByTagName("row")
+
+                Dim rowItem As New sLabelrows
+
+                For Each element As XmlNode In nodo.ChildNodes
+                    Dim tag As String = element.Name.ToLower()
+                    Dim value As String = CleanString(CTran(element.InnerText, ""))
+
+                    Select Case tag
+                        Case "labelfield0" : rowItem.labelfield0 = value
+                        Case "labelfield1" : rowItem.labelfield1 = value
+                        Case "labelfield2" : rowItem.labelfield2 = value
+                        Case "labelfield3" : rowItem.labelfield3 = value
+                        Case "ean13" : rowItem.ean13 = value
+                        Case "code128" : rowItem.code128 = value
+                    End Select
+                Next
+
+                labelRowsList.Add(rowItem)
+            Next
+
+            xmlReader.Close()
+
+            ' elimina il file sorgente
+            File.Delete(pFilename)
+
+            ' --- STAMPA UNA ETICHETTA PER OGNI RIGA ---
+            For Each rowData As sLabelrows In labelRowsList
+                labelRows = rowData
+                printLabel()
+            Next
+
+            Return True
+
+        Catch ex As IOException
+            txt_folderactivity.Text &= $"Errore lettura file, numero lettura: {i}" & vbCrLf
+            Return False
+
+        Catch ex As Exception
+            txt_folderactivity.Text &= $"Errore non gestito, numero lettura: {i}" & vbCrLf
+            MsgBox(ex.Message, MsgBoxStyle.Critical, "readXmlLabelFile")
+            Return False
+        End Try
     End Function
 
     Private Function loadTemplate(ByVal pFilename As String) As Boolean
