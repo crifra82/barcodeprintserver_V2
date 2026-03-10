@@ -607,7 +607,7 @@ Public Class WatchFold
         End Try
     End Function
 
-    Private Function readXmlLabelFile(ByVal pFilename As String, i As Integer) As Boolean
+    Private Function ___old3__readXmlLabelFile(ByVal pFilename As String, i As Integer) As Boolean
         Try
             ' --- Attendi che il file sia completo ---
             Threading.Thread.Sleep(g_time)
@@ -666,6 +666,83 @@ Public Class WatchFold
         Catch ex As IOException
             txt_folderactivity.Text &= $"Errore lettura file, numero lettura: {i}" & vbCrLf
             Return False
+        Catch ex As Exception
+            txt_folderactivity.Text &= $"Errore non gestito, numero lettura: {i}" & vbCrLf
+            MsgBox(ex.Message, MsgBoxStyle.Critical, "readXmlLabelFile")
+            Return False
+        End Try
+    End Function
+
+    Private Function readXmlLabelFile(ByVal pFilename As String, i As Integer) As Boolean
+        Try
+            ' --- Attendi che il file sia completo ---
+            Threading.Thread.Sleep(g_time)
+
+            ' --- Leggi il file così com’è ---
+            Dim rawXml As String = File.ReadAllText(pFilename, New System.Text.UTF8Encoding(False))
+            rawXml = rawXml.TrimStart()
+
+            Dim xmlDoc As New XmlDocument()
+            xmlDoc.LoadXml(rawXml)
+
+            labelRowsList.Clear()
+
+            ' --- Leggi testata ---
+            For Each nodo As XmlNode In xmlDoc.GetElementsByTagName("dataroot")
+                For Each element As XmlNode In nodo.ChildNodes
+                    Select Case element.Name.ToLower()
+                        Case "templatename"
+                            loadTemplate(element.InnerText)
+                        Case "printername"
+                            PrinterName = element.InnerText
+                    End Select
+                Next
+            Next
+
+            ' --- Leggi tutte le righe <row> ---
+            For Each nodo As XmlNode In xmlDoc.GetElementsByTagName("row")
+
+                Dim rowItem As New sLabelrows
+
+                For Each element As XmlNode In nodo.ChildNodes
+                    Dim tag As String = element.Name.ToLower()
+                    Dim value As String
+
+                    ' ➤ NON pulire i barcode (devono rimanere codificati!)
+                    If tag = "ean13" OrElse tag = "code128" Then
+                        value = element.InnerText    ' lasciato intatto
+                    Else
+                        value = CleanString(CTran(element.InnerText, ""))
+                    End If
+
+                    Select Case tag
+                        Case "labelfield0" : rowItem.labelfield0 = value
+                        Case "labelfield1" : rowItem.labelfield1 = value
+                        Case "labelfield2" : rowItem.labelfield2 = value
+                        Case "labelfield3" : rowItem.labelfield3 = value
+                        Case "ean13" : rowItem.ean13 = value
+                        Case "code128" : rowItem.code128 = value
+                    End Select
+                Next
+
+                labelRowsList.Add(rowItem)
+            Next
+
+            ' --- Rimuovi file ---
+            File.Delete(pFilename)
+
+            ' --- Stampa ---
+            For Each rowData As sLabelrows In labelRowsList
+                labelRows = rowData
+                printLabel()
+            Next
+
+            Return True
+
+        Catch ex As IOException
+            txt_folderactivity.Text &= $"Errore lettura file, numero lettura: {i}" & vbCrLf
+            Return False
+
         Catch ex As Exception
             txt_folderactivity.Text &= $"Errore non gestito, numero lettura: {i}" & vbCrLf
             MsgBox(ex.Message, MsgBoxStyle.Critical, "readXmlLabelFile")
